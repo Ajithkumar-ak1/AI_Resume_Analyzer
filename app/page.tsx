@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ResumeUploader from "./components/ResumeUploader";
 import JobDescriptionInput from "./components/JobDescriptionInput";
 import AnalyzeButton from "./components/AnalyzeButton";
 import ResultsPlaceholder from "./components/ResultsPlaceholder";
+import { extractSkills } from "./utils/skillExtractor";
 
 export default function Home() {
   const [resumeText, setResumeText] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [jobDescription, setJobDescription] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resumeText && jobDescription) {
+      const resumeSkills = extractSkills(resumeText);
+      const jobSkills = extractSkills(jobDescription);
+
+      console.log("Resume Skills:", resumeSkills);
+      console.log("Job Description Skills:", jobSkills);
+    }
+  }, [resumeText, jobDescription]);
 
   const handleTextExtracted = (text: string, filename: string) => {
     setResumeText(text);
@@ -35,7 +47,7 @@ export default function Home() {
           onErrorChange={setError}
           isLoading={loading}
         />
-        <JobDescriptionInput />
+        <JobDescriptionInput value={jobDescription} onChange={setJobDescription} />
       </section>
       {error && (
         <div className="w-full max-w-2xl mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
