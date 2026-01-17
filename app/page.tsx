@@ -3,26 +3,39 @@
 import { useState, useEffect } from "react";
 import ResumeUploader from "./components/ResumeUploader";
 import JobDescriptionInput from "./components/JobDescriptionInput";
+
 import AnalyzeButton from "./components/AnalyzeButton";
 import ResultsPlaceholder from "./components/ResultsPlaceholder";
+import Results from "./components/Results";
 import { extractSkills } from "./utils/skillExtractor";
+import { matchSkills } from "./utils/skillMatcher";
+import { generateFeedback } from "./utils/feedbackGenerator";
 
 export default function Home() {
+
   const [resumeText, setResumeText] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [matchPercentage, setMatchPercentage] = useState<number>(0);
+  const [matchedSkills, setMatchedSkills] = useState<string[]>([]);
+  const [missingSkills, setMissingSkills] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (resumeText && jobDescription) {
-      const resumeSkills = extractSkills(resumeText);
-      const jobSkills = extractSkills(jobDescription);
 
-      console.log("Resume Skills:", resumeSkills);
-      console.log("Job Description Skills:", jobSkills);
-    }
-  }, [resumeText, jobDescription]);
+  const handleAnalyze = () => {
+    setShowResults(false);
+    const resumeSkills = extractSkills(resumeText);
+    const jdSkills = extractSkills(jobDescription);
+    const { matchedSkills, missingSkills, matchPercentage } = matchSkills(resumeSkills, jdSkills);
+    setMatchedSkills(matchedSkills);
+    setMissingSkills(missingSkills);
+    setMatchPercentage(matchPercentage);
+    setFeedback(generateFeedback(missingSkills));
+    setShowResults(true);
+  };
 
   const handleTextExtracted = (text: string, filename: string) => {
     setResumeText(text);
@@ -55,10 +68,21 @@ export default function Home() {
         </div>
       )}
       <div className="w-full max-w-2xl flex justify-center mt-8">
-        <AnalyzeButton />
+        <AnalyzeButton
+          onAnalyze={handleAnalyze}
+          disabled={loading || !resumeText || !jobDescription}
+          loading={loading}
+        />
       </div>
       <div className="w-full max-w-3xl">
-        {resumeText ? (
+        {showResults ? (
+          <Results
+            matchPercentage={matchPercentage}
+            matchedSkills={matchedSkills}
+            missingSkills={missingSkills}
+            feedback={feedback}
+          />
+        ) : resumeText ? (
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8 mt-8">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-2">Uploaded Resume</h2>
