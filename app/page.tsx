@@ -10,6 +10,8 @@ import Results from "./components/Results";
 import { extractSkills } from "./utils/skillExtractor";
 import { matchSkills } from "./utils/skillMatcher";
 import { generateFeedback } from "./utils/feedbackGenerator";
+import { analyzeWithAI, AIAnalyzerResult } from "./utils/aiAnalyzer";
+import AIInsights from "./components/AIInsights";
 
 export default function Home() {
 
@@ -23,10 +25,15 @@ export default function Home() {
   const [matchedSkills, setMatchedSkills] = useState<string[]>([]);
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<AIAnalyzerResult | null>(null);
 
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     setShowResults(false);
+    setAiInsights(null);
+    setAiError(null);
     const resumeSkills = extractSkills(resumeText);
     const jdSkills = extractSkills(jobDescription);
     const { matchedSkills, missingSkills, matchPercentage } = matchSkills(resumeSkills, jdSkills);
@@ -35,6 +42,25 @@ export default function Home() {
     setMatchPercentage(matchPercentage);
     setFeedback(generateFeedback(missingSkills));
     setShowResults(true);
+    setAiLoading(true);
+    try {
+      const aiResult = await analyzeWithAI({
+        resumeSkills,
+        jdSkills,
+        matchedSkills,
+        missingSkills,
+        matchPercentage,
+      });
+      if (!aiResult) {
+        setAiError("AI could not generate insights. Please try again.");
+      } else {
+        setAiInsights(aiResult);
+      }
+    } catch (e) {
+      setAiError("AI analysis failed. Please try again later.");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleTextExtracted = (text: string, filename: string) => {
@@ -76,12 +102,15 @@ export default function Home() {
       </div>
       <div className="w-full max-w-3xl">
         {showResults ? (
-          <Results
-            matchPercentage={matchPercentage}
-            matchedSkills={matchedSkills}
-            missingSkills={missingSkills}
-            feedback={feedback}
-          />
+          <>
+            <Results
+              matchPercentage={matchPercentage}
+              matchedSkills={matchedSkills}
+              missingSkills={missingSkills}
+              feedback={feedback}
+            />
+            <AIInsights loading={aiLoading} error={aiError} insights={aiInsights} />
+          </>
         ) : resumeText ? (
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8 mt-8">
             <div className="mb-6">
